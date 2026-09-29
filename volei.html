@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vôlei Draft - Gerenciador e Sorteador de Times</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN para ícones esportivos e visuais -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fonte Inter Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Configuração de Temas do Tailwind com Cores Esportivas -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            blue: '#0d3b66',
+                            orange: '#f45b69',
+                            vibrant: '#ee964b',
+                            dark: '#0f172a',
+                            light: '#f8fafc',
+                            court: '#1e293b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30 shrink-0">
+                    <i class="fa-solid font-bold fa-volleyball text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                        VÔLEI <span class="text-orange-500">DRAFT</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium hidden sm:block">Sorteador Inteligente e Balanceamento de Times</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Toggle Global para Ocultar/Exibir Níveis e Estrelas -->
+                <button onclick="togglePrivacyMode()" id="privacyToggleBtn" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition border flex items-center gap-1.5 bg-slate-800 text-slate-300 hover:text-white border-slate-700">
+                    <i id="privacyIcon" class="fa-solid fa-eye-slash text-amber-400"></i>
+                    <span id="privacyLabel" class="hidden md:inline">Ocultar Estrelas</span>
+                </button>
+
+                <div class="bg-slate-800/80 rounded-lg px-2.5 py-1.5 border border-slate-700/50 flex items-center space-x-2">
+                    <i class="fa-solid fa-users text-amber-400 text-sm"></i>
+                    <span class="text-xs text-slate-300 font-semibold">Total: <strong id="totalPlayersBadge" class="text-white text-sm">0</strong></span>
+                </div>
+
+                <button onclick="openRulesModal()" class="px-3 py-1.5 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition border border-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-info text-amber-400"></i>
+                    <span class="hidden sm:inline">Regras</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container Dashboard -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Sidebar: Cadastros & Configurações (5 cols) -->
+        <section class="lg:col-span-5 space-y-6">
+            
+            <!-- Card de Cadastro de Jogadores -->
+            <div class="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-xl text-white">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-slate-100">
+                        <i class="fa-solid fa-user-plus text-orange-400"></i> Cadastrar Jogador
+                    </h2>
+                    <span class="text-xs bg-slate-700/60 text-slate-300 px-2 py-1 rounded">Formulário</span>
+                </div>
+
+                <form id="playerForm" class="space-y-4" onsubmit="handleAddPlayer(event)">
+                    <!-- Nome -->
+                    <div>
+                        <label for="playerName" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Nome do Jogador</label>
+                        <input type="text" id="playerName" required placeholder="Ex: Lucas Silva" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition">
+                    </div>
+
+                    <!-- Gênero -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Gênero</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="gender" value="M" checked class="peer sr-only">
+                                <div class="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-medium text-slate-400 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-400 transition">
+                                    <i class="fa-solid fa-mars"></i> Masculino
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="gender" value="F" class="peer sr-only">
+                                <div class="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-medium text-slate-400 peer-checked:border-pink-500 peer-checked:bg-pink-500/10 peer-checked:text-pink-400 transition">
+                                    <i class="fa-solid fa-venus"></i> Feminino
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Nível / Função por Estrelas -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Nível de Habilidade / Função</label>
+                        <div class="space-y-2">
+                            <select id="playerLevel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition" onchange="updateLevelDescription()">
+                                <option value="1">1 ★ - Levantador (Obrigatório 1/time)</option>
+                                <option value="2">2 ★★ - Mulher nível inicial/médio</option>
+                                <option value="3" selected>3 ★★★ - Passe / Regular</option>
+                                <option value="4">4 ★★★★ - Bom passe & Ataque</option>
+                                <option value="5">5 ★★★★★ - Craque / Vira Bola</option>
+                            </select>
+                            <div id="levelHelpText" class="text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 flex items-start gap-2">
+                                <i class="fa-solid fa-circle-info mt-0.5 text-amber-400"></i>
+                                <span id="levelHelpContent">Passe intermediário, jogador com fundamentos básicos e constância.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão Adicionar -->
+                    <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/20 transition duration-200 flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-plus"></i> Adicionar à Lista
+                    </button>
+                </form>
+            </div>
+
+            <!-- Lista de Jogadores Cadastrados -->
+            <div class="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-xl text-white flex flex-col" style="max-height: 520px;">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-3">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-slate-100">
+                        <i class="fa-solid fa-list-check text-blue-400"></i> Cadastrados
+                        <span id="registeredCountBadge" class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">0</span>
+                    </h2>
+                    
+                    <div class="flex items-center gap-2">
+                        <!-- Dropdown Presets -->
+                        <div class="relative inline-block text-left">
+                            <button id="presetDropdownBtn" onclick="togglePresetMenu()" class="px-2.5 py-1 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-amber-300 rounded-lg border border-slate-600 transition flex items-center gap-1">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Testes <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                            </button>
+                            <div id="presetMenu" class="hidden absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-20 py-1">
+                                <button onclick="loadPreset(12)" class="w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                                    <span>Preset 12 Jogadores</span> <span class="text-slate-500 font-mono">2 Times</span>
+                                </button>
+                                <button onclick="loadPreset(18)" class="w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                                    <span>Preset 18 Jogadores</span> <span class="text-slate-500 font-mono">3 Times</span>
+                                </button>
+                                <button onclick="loadPreset(24)" class="w-full text-left px-4 py-2 text-xs text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                                    <span>Preset 24 Jogadores</span> <span class="text-slate-500 font-mono">4 Times</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Botão Limpar Tudo -->
+                        <button onclick="clearAllPlayers()" class="px-2.5 py-1 text-xs font-semibold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 rounded-lg transition">
+                            Limpar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista Rolável -->
+                <div id="playersList" class="overflow-y-auto space-y-2 pr-1 custom-scrollbar flex-grow min-h-[160px]">
+                    <!-- Injetado por JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Main Panel: Sorteio e Resultados (7 cols) -->
+        <section class="lg:col-span-7 space-y-6">
+
+            <!-- Card de Configuração do Formato de Sorteio -->
+            <div class="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-xl text-white">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-slate-100">
+                        <i class="fa-solid fa-sliders text-amber-400"></i> Formato do Sorteio
+                    </h2>
+                    <span class="text-xs text-slate-400">Selecione a modalidade</span>
+                </div>
+
+                <!-- Seleção de Formato -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="drawFormat" value="12" checked onchange="handleFormatChange()" class="peer sr-only">
+                        <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl peer-checked:border-orange-500 peer-checked:bg-orange-500/10 peer-checked:text-orange-400 text-slate-300 transition text-center h-full flex flex-col justify-between">
+                            <div class="font-extrabold text-base">2 Times</div>
+                            <div class="text-xs text-slate-400 mt-1">12 Jogadores (6x6)</div>
+                            <div class="text-[10px] text-amber-400 mt-1 font-mono">Exige 2 Levantadores</div>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <input type="radio" name="drawFormat" value="18" onchange="handleFormatChange()" class="peer sr-only">
+                        <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl peer-checked:border-orange-500 peer-checked:bg-orange-500/10 peer-checked:text-orange-400 text-slate-300 transition text-center h-full flex flex-col justify-between">
+                            <div class="font-extrabold text-base">3 Times</div>
+                            <div class="text-xs text-slate-400 mt-1">18 Jogadores (6x6)</div>
+                            <div class="text-[10px] text-amber-400 mt-1 font-mono">Exige 3 Levantadores</div>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <input type="radio" name="drawFormat" value="24" onchange="handleFormatChange()" class="peer sr-only">
+                        <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl peer-checked:border-orange-500 peer-checked:bg-orange-500/10 peer-checked:text-orange-400 text-slate-300 transition text-center h-full flex flex-col justify-between">
+                            <div class="font-extrabold text-base">4 Times</div>
+                            <div class="text-xs text-slate-400 mt-1">24 Jogadores (6x6)</div>
+                            <div class="text-[10px] text-amber-400 mt-1 font-mono">Exige 4 Levantadores</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Status de Validação -->
+                <div id="formatValidationBox" class="p-3 rounded-xl border text-xs mb-4 bg-slate-900 border-slate-700 text-slate-300 flex items-center justify-between">
+                    <span id="formatValidationMsg" class="flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check text-emerald-400"></i> Pronto para sortear.
+                    </span>
+                    <span id="formatRequirementBadge" class="font-mono text-[11px] text-slate-400">12/12</span>
+                </div>
+
+                <!-- Botão Sorteio -->
+                <button onclick="executeBalancedDraw()" id="btnDraw" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-3.5 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition duration-200 flex items-center justify-center gap-3 text-base">
+                    <i class="fa-solid fa-shuffle text-lg"></i> SORTEAR TIMES EQUILIBRADOS
+                </button>
+            </div>
+
+            <!-- Área de Exibição dos Times Sorteados -->
+            <div id="resultsContainer" class="space-y-4">
+                <!-- Estado Inicial Vazio -->
+                <div id="emptyResultsState" class="bg-slate-800/50 border border-dashed border-slate-700 rounded-2xl p-8 text-center text-slate-400">
+                    <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 text-2xl">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-200 text-base mb-1">Nenhum time sorteado ainda</h3>
+                    <p class="text-xs text-slate-400 max-w-sm mx-auto">Cadastre os jogadores necessários, selecione o formato desejado e clique no botão acima para gerar os times equilibrados.</p>
+                </div>
+
+                <!-- Ações Pós-Sorteio -->
+                <div id="drawActionsBar" class="hidden flex flex-wrap items-center justify-between gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3">
+                    <div class="text-xs text-slate-300 font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                        <span>Sorteio concluído com sucesso!</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="executeBalancedDraw()" class="px-3 py-1.5 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate"></i> Re-Sortear
+                        </button>
+                        <button onclick="copyTeamsToClipboard()" class="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-brands fa-whatsapp"></i> Copiar p/ WhatsApp
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid de Times -->
+                <div id="teamsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Injetado por JS -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal de Edição de Jogador -->
+    <div id="editPlayerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 text-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeEditModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <h3 class="text-lg font-bold flex items-center gap-2 mb-4 text-amber-400">
+                <i class="fa-solid fa-user-pen"></i> Editar Jogador
+            </h3>
+
+            <form id="editPlayerForm" onsubmit="handleSaveEditPlayer(event)" class="space-y-4">
+                <input type="hidden" id="editPlayerId">
+
+                <!-- Nome -->
+                <div>
+                    <label for="editPlayerName" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Nome do Jogador</label>
+                    <input type="text" id="editPlayerName" required 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition">
+                </div>
+
+                <!-- Gênero -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Gênero</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="editGender" value="M" id="editGenderM" class="peer sr-only">
+                            <div class="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-medium text-slate-400 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-400 transition">
+                                <i class="fa-solid fa-mars"></i> Masculino
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="editGender" value="F" id="editGenderF" class="peer sr-only">
+                            <div class="flex items-center justify-center gap-2 bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-3 text-sm font-medium text-slate-400 peer-checked:border-pink-500 peer-checked:bg-pink-500/10 peer-checked:text-pink-400 transition">
+                                <i class="fa-solid fa-venus"></i> Feminino
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Nível -->
+                <div>
+                    <label for="editPlayerLevel" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Nível de Habilidade</label>
+                    <select id="editPlayerLevel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition">
+                        <option value="1">1 ★ - Levantador (Obrigatório 1/time)</option>
+                        <option value="2">2 ★★ - Mulher nível inicial/médio</option>
+                        <option value="3">3 ★★★ - Passe / Regular</option>
+                        <option value="4">4 ★★★★ - Bom passe & Ataque</option>
+                        <option value="5">5 ★★★★★ - Craque / Vira Bola</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl transition shadow-md">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Informação de Regras -->
+    <div id="rulesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 text-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeRulesModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold flex items-center gap-2 mb-4 text-amber-400">
+                <i class="fa-solid fa-volleyball"></i> Regras de Classificação
+            </h3>
+            <div class="space-y-3 text-xs text-slate-300">
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700">
+                    <div class="font-bold text-amber-400 mb-1">1 Estrela ★ (Levantador)</div>
+                    <p>Obrigatório **1 levantador em cada time**.</p>
+                </div>
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700">
+                    <div class="font-bold text-pink-400 mb-1">2 Estrelas ★★ (Mulher Nível Inicial/Médio)</div>
+                    <p>Distribuídas **de forma homogênea** entre os times.</p>
+                </div>
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700">
+                    <div class="font-bold text-blue-400 mb-1">3 Estrelas ★★★ (Passe Intermediário)</div>
+                    <p>Jogador constante, cumpre o papel de recepção e defesa.</p>
+                </div>
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700">
+                    <div class="font-bold text-purple-400 mb-1">4 Estrelas ★★★★ (Bom Passe & Ataque)</div>
+                    <p>Jogador acima da média em ataque ou passe.</p>
+                </div>
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700">
+                    <div class="font-bold text-emerald-400 mb-1">5 Estrelas ★★★★★ (Craque / Vira Bola)</div>
+                    <p>Jogador decisivo. Distribuído para equilibrar a força total dos times.</p>
+                </div>
+            </div>
+            <button onclick="closeRulesModal()" class="mt-5 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-xl text-xs transition">
+                Entendi
+            </button>
+        </div>
+    </div>
+
+    <!-- Feedback Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-amber-400 text-lg"></i>
+        <span id="toastMessage" class="text-xs font-semibold">Mensagem de aviso</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-800/80 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            Vôlei Draft &copy; 2026 - Dashboard de Gerenciamento Esportivo e Algoritmo de Equilíbrio
+        </div>
+    </footer>
+
+    <script>
+        /* ==========================================================================
+           ESTADO DA APLICAÇÃO E VARIÁVEIS
+           ========================================================================== */
+        let players = [];
+        let currentTeams = [];
+        let hideStarsMode = false; // Estado global para ocultar/exibir estrelas/níveis
+
+        const LEVEL_DESCRIPTIONS = {
+            "1": "Levantador chave do time. O Sorteio colocará exatamente 1 por time.",
+            "2": "Mulher nível baixo/médio. Distribuída uniformemente entre os times.",
+            "3": "Passe intermediário, jogador com fundamentos básicos e constância.",
+            "4": "Bom passe e bom ataque, jogador acima da média.",
+            "5": "Vira bola (Craque do time), jogador decisivo de alto nível."
+        };
+
+        const PRESETS = {
+            12: [
+                { id: '1', name: 'Bruno Rezende', gender: 'M', level: 1 },
+                { id: '2', name: 'Fernando Cachopa', gender: 'M', level: 1 },
+                { id: '3', name: 'Ana Cristina', gender: 'F', level: 2 },
+                { id: '4', name: 'Carol Gattaz', gender: 'F', level: 2 },
+                { id: '5', name: 'Lucas Saatkamp', gender: 'M', level: 3 },
+                { id: '6', name: 'Ricardo Lucarelli', gender: 'M', level: 3 },
+                { id: '7', name: 'Thaisa Daher', gender: 'F', level: 3 },
+                { id: '8', name: 'Wallace de Souza', gender: 'M', level: 4 },
+                { id: '9', name: 'Yoandy Leal', gender: 'M', level: 4 },
+                { id: '10', name: 'Gabi Guimarães', gender: 'F', level: 4 },
+                { id: '11', name: 'Alan Souza', gender: 'M', level: 5 },
+                { id: '12', name: 'Darlan Souza', gender: 'M', level: 5 }
+            ],
+            18: [
+                { id: '1', name: 'Bruno Rezende', gender: 'M', level: 1 },
+                { id: '2', name: 'Fernando Cachopa', gender: 'M', level: 1 },
+                { id: '3', name: 'William Arjona', gender: 'M', level: 1 },
+                { id: '4', name: 'Ana Cristina', gender: 'F', level: 2 },
+                { id: '5', name: 'Carol Gattaz', gender: 'F', level: 2 },
+                { id: '6', name: 'Pri Daroit', gender: 'F', level: 2 },
+                { id: '7', name: 'Lucas Saatkamp', gender: 'M', level: 3 },
+                { id: '8', name: 'Ricardo Lucarelli', gender: 'M', level: 3 },
+                { id: '9', name: 'Thaisa Daher', gender: 'F', level: 3 },
+                { id: '10', name: 'Maurício Borges', gender: 'M', level: 3 },
+                { id: '11', name: 'Rosamaria Montibeller', gender: 'F', level: 3 },
+                { id: '12', name: 'Maique Nascimento', gender: 'M', level: 3 },
+                { id: '13', name: 'Wallace de Souza', gender: 'M', level: 4 },
+                { id: '14', name: 'Yoandy Leal', gender: 'M', level: 4 },
+                { id: '15', name: 'Gabi Guimarães', gender: 'F', level: 4 },
+                { id: '16', name: 'Douglas Souza', gender: 'M', level: 4 },
+                { id: '17', name: 'Alan Souza', gender: 'M', level: 5 },
+                { id: '18', name: 'Darlan Souza', gender: 'M', level: 5 }
+            ],
+            24: [
+                { id: '1', name: 'Bruno Rezende', gender: 'M', level: 1 },
+                { id: '2', name: 'Fernando Cachopa', gender: 'M', level: 1 },
+                { id: '3', name: 'William Arjona', gender: 'M', level: 1 },
+                { id: '4', name: 'Macris Carneiro', gender: 'F', level: 1 },
+                { id: '5', name: 'Ana Cristina', gender: 'F', level: 2 },
+                { id: '6', name: 'Carol Gattaz', gender: 'F', level: 2 },
+                { id: '7', name: 'Pri Daroit', gender: 'F', level: 2 },
+                { id: '8', name: 'Nyeme Costa', gender: 'F', level: 2 },
+                { id: '9', name: 'Lucas Saatkamp', gender: 'M', level: 3 },
+                { id: '10', name: 'Ricardo Lucarelli', gender: 'M', level: 3 },
+                { id: '11', name: 'Thaisa Daher', gender: 'F', level: 3 },
+                { id: '12', name: 'Maurício Borges', gender: 'M', level: 3 },
+                { id: '13', name: 'Rosamaria', gender: 'F', level: 3 },
+                { id: '14', name: 'Maique Nascimento', gender: 'M', level: 3 },
+                { id: '15', name: 'Isac Santos', gender: 'M', level: 3 },
+                { id: '16', name: 'Otávio Pinto', gender: 'M', level: 3 },
+                { id: '17', name: 'Wallace de Souza', gender: 'M', level: 4 },
+                { id: '18', name: 'Yoandy Leal', gender: 'M', level: 4 },
+                { id: '19', name: 'Gabi Guimarães', gender: 'F', level: 4 },
+                { id: '20', name: 'Douglas Souza', gender: 'M', level: 4 },
+                { id: '21', name: 'Honorato', gender: 'M', level: 4 },
+                { id: '22', name: 'Flávio Gualberto', gender: 'M', level: 4 },
+                { id: '23', name: 'Alan Souza', gender: 'M', level: 5 },
+                { id: '24', name: 'Darlan Souza', gender: 'M', level: 5 }
+            ]
+        };
+
+        window.onload = function() {
+            loadFromLocalStorage();
+            if (players.length === 0) {
+                loadPreset(12, false);
+            } else {
+                renderPlayersList();
+                validateFormatState();
+            }
+        };
+
+        function saveToLocalStorage() {
+            localStorage.setItem('volei_draft_players', JSON.stringify(players));
+            localStorage.setItem('volei_draft_privacy', JSON.stringify(hideStarsMode));
+        }
+
+        function loadFromLocalStorage() {
+            const stored = localStorage.getItem('volei_draft_players');
+            if (stored) {
+                try { players = JSON.parse(stored); } catch (e) { players = []; }
+            }
+            const storedPrivacy = localStorage.getItem('volei_draft_privacy');
+            if (storedPrivacy) {
+                try { 
+                    hideStarsMode = JSON.parse(storedPrivacy);
+                    updatePrivacyUI();
+                } catch(e) {}
+            }
+        }
+
+        /* ==========================================================================
+           FUNCIONALIDADE: MODO PRIVACIDADE (EXIBIR / OCULTAR ESTRELAS)
+           ========================================================================== */
+        function togglePrivacyMode() {
+            hideStarsMode = !hideStarsMode;
+            saveToLocalStorage();
+            updatePrivacyUI();
+            renderPlayersList();
+            if (currentTeams.length > 0) {
+                renderTeamsResults(currentTeams);
+            }
+            showToast(hideStarsMode ? 'Níveis de estrelas ocultados para a partida.' : 'Níveis e estrelas visíveis.', 'info');
+        }
+
+        function updatePrivacyUI() {
+            const btn = document.getElementById('privacyToggleBtn');
+            const icon = document.getElementById('privacyIcon');
+            const label = document.getElementById('privacyLabel');
+
+            if (hideStarsMode) {
+                icon.className = "fa-solid fa-eye text-emerald-400";
+                label.innerText = "Exibir Estrelas";
+                btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition border flex items-center gap-1.5 bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20";
+            } else {
+                icon.className = "fa-solid fa-eye-slash text-amber-400";
+                label.innerText = "Ocultar Estrelas";
+                btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition border flex items-center gap-1.5 bg-slate-800 text-slate-300 hover:text-white border-slate-700";
+            }
+        }
+
+        function updateLevelDescription() {
+            const level = document.getElementById('playerLevel').value;
+            document.getElementById('levelHelpContent').innerText = LEVEL_DESCRIPTIONS[level];
+        }
+
+        /* ==========================================================================
+           GERENCIAMENTO DE JOGADORES (ADICIONAR, EDITAR, REMOVER)
+           ========================================================================== */
+        function handleAddPlayer(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('playerName');
+            const name = nameInput.value.trim();
+            const gender = document.querySelector('input[name="gender"]:checked').value;
+            const level = parseInt(document.getElementById('playerLevel').value, 10);
+
+            if (!name) {
+                showToast('Por favor, informe o nome do jogador.', 'warning');
+                return;
+            }
+
+            const newPlayer = {
+                id: Date.now().toString(),
+                name: name,
+                gender: gender,
+                level: level
+            };
+
+            players.push(newPlayer);
+            saveToLocalStorage();
+            renderPlayersList();
+            validateFormatState();
+
+            nameInput.value = '';
+            nameInput.focus();
+            showToast(`Jogador "${name}" adicionado!`, 'success');
+        }
+
+        // ABRIR MODAL DE EDIÇÃO
+        function openEditModal(id) {
+            const player = players.find(p => p.id === id);
+            if (!player) return;
+
+            document.getElementById('editPlayerId').value = player.id;
+            document.getElementById('editPlayerName').value = player.name;
+            document.getElementById('editPlayerLevel').value = player.level;
+            
+            if (player.gender === 'F') {
+                document.getElementById('editGenderF').checked = true;
+            } else {
+                document.getElementById('editGenderM').checked = true;
+            }
+
+            const modal = document.getElementById('editPlayerModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editPlayerModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // SALVAR EDIÇÃO DO JOGADOR
+        function handleSaveEditPlayer(e) {
+            e.preventDefault();
+            const id = document.getElementById('editPlayerId').value;
+            const name = document.getElementById('editPlayerName').value.trim();
+            const gender = document.querySelector('input[name="editGender"]:checked').value;
+            const level = parseInt(document.getElementById('editPlayerLevel').value, 10);
+
+            if (!name) {
+                showToast('O nome do jogador não pode ficar vazio.', 'warning');
+                return;
+            }
+
+            const playerIndex = players.findIndex(p => p.id === id);
+            if (playerIndex !== -1) {
+                players[playerIndex].name = name;
+                players[playerIndex].gender = gender;
+                players[playerIndex].level = level;
+
+                saveToLocalStorage();
+                renderPlayersList();
+                validateFormatState();
+
+                // Atualizar exibição se houver times gerados
+                if (currentTeams.length > 0) {
+                    currentTeams.forEach(team => {
+                        const tp = team.players.find(p => p.id === id);
+                        if (tp) {
+                            tp.name = name;
+                            tp.gender = gender;
+                            tp.level = level;
+                        }
+                    });
+                    renderTeamsResults(currentTeams);
+                }
+
+                closeEditModal();
+                showToast('Cadastro do jogador atualizado!', 'success');
+            }
+        }
+
+        function removePlayer(id) {
+            players = players.filter(p => p.id !== id);
+            saveToLocalStorage();
+            renderPlayersList();
+            validateFormatState();
+            showToast('Jogador removido.', 'info');
+        }
+
+        function clearAllPlayers() {
+            if (players.length === 0) return;
+            if (confirm('Deseja realmente remover todos os jogadores cadastrados?')) {
+                players = [];
+                saveToLocalStorage();
+                renderPlayersList();
+                validateFormatState();
+                clearResultsUI();
+                showToast('Todos os jogadores foram removidos.', 'info');
+            }
+        }
+
+        function loadPreset(count, notify = true) {
+            players = [...PRESETS[count]];
+            saveToLocalStorage();
+            renderPlayersList();
+            
+            const radio = document.querySelector(`input[name="drawFormat"][value="${count}"]`);
+            if (radio) {
+                radio.checked = true;
+            }
+            
+            validateFormatState();
+            closePresetMenu();
+            if (notify) {
+                showToast(`Preset com ${count} jogadores carregado!`, 'success');
+            }
+        }
+
+        function togglePresetMenu() {
+            document.getElementById('presetMenu').classList.toggle('hidden');
+        }
+
+        function closePresetMenu() {
+            document.getElementById('presetMenu').classList.add('hidden');
+        }
+
+        document.addEventListener('click', function(e) {
+            const btn = document.getElementById('presetDropdownBtn');
+            const menu = document.getElementById('presetMenu');
+            if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        /* ==========================================================================
+           RENDERIZAÇÃO DA LISTA DE JOGADORES
+           ========================================================================== */
+        function renderPlayersList() {
+            const listEl = document.getElementById('playersList');
+            document.getElementById('registeredCountBadge').innerText = players.length;
+            document.getElementById('totalPlayersBadge').innerText = players.length;
+
+            if (players.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        <i class="fa-solid fa-users-slash text-2xl mb-2 block text-slate-600"></i>
+                        Nenhum jogador cadastrado.<br>Use o formulário acima ou carregue um Preset.
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = players.map(p => {
+                const genderIcon = p.gender === 'F' 
+                    ? '<i class="fa-solid fa-venus text-pink-400" title="Feminino"></i>' 
+                    : '<i class="fa-solid fa-mars text-blue-400" title="Masculino"></i>';
+
+                let levelBadge = '';
+                if (hideStarsMode) {
+                    levelBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] px-2 py-0.5 rounded font-mono">Nível Oculto</span>`;
+                } else {
+                    if (p.level === 1) {
+                        levelBadge = `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded font-bold">Levantador (1★)</span>`;
+                    } else if (p.level === 2) {
+                        levelBadge = `<span class="bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[10px] px-2 py-0.5 rounded font-bold">2★ (Fem)</span>`;
+                    } else {
+                        const stars = '★'.repeat(p.level) + '☆'.repeat(5 - p.level);
+                        levelBadge = `<span class="bg-slate-700 text-amber-400 text-[10px] px-2 py-0.5 rounded font-mono tracking-widest">${stars}</span>`;
+                    }
+                }
+
+                return `
+                    <div class="bg-slate-900/90 border border-slate-700/70 hover:border-slate-600 rounded-xl p-2.5 flex items-center justify-between transition group">
+                        <div class="flex items-center space-x-3 overflow-hidden">
+                            <div class="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-xs shrink-0">
+                                ${genderIcon}
+                            </div>
+                            <div class="truncate">
+                                <div class="text-xs font-bold text-slate-200 truncate">${escapeHtml(p.name)}</div>
+                                <div class="mt-0.5">${levelBadge}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <!-- Botão de Editar Jogador -->
+                            <button onclick="openEditModal('${p.id}')" class="text-slate-400 hover:text-amber-400 p-1.5 transition" title="Editar Jogador">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <!-- Botão de Excluir Jogador -->
+                            <button onclick="removePlayer('${p.id}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition" title="Excluir Jogador">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* ==========================================================================
+           LÓGICA DE VALIDAÇÃO E ALGORITMO DE SORTEIO
+           ========================================================================== */
+        function getSelectedFormatTarget() {
+            const selected = document.querySelector('input[name="drawFormat"]:checked');
+            return selected ? parseInt(selected.value, 10) : 12;
+        }
+
+        function handleFormatChange() {
+            validateFormatState();
+        }
+
+        function validateFormatState() {
+            const requiredTotal = getSelectedFormatTarget();
+            const requiredTeams = requiredTotal / 6;
+            const currentTotal = players.length;
+            const settersCount = players.filter(p => p.level === 1).length;
+
+            const box = document.getElementById('formatValidationBox');
+            const msg = document.getElementById('formatValidationMsg');
+            const badge = document.getElementById('formatRequirementBadge');
+            const btnDraw = document.getElementById('btnDraw');
+
+            badge.innerText = `${currentTotal}/${requiredTotal}`;
+
+            let errors = [];
+
+            if (currentTotal !== requiredTotal) {
+                errors.push(`Quantidade de jogadores incorreta (${currentTotal} de ${requiredTotal} necessários).`);
+            }
+
+            if (settersCount < requiredTeams) {
+                errors.push(`Faltam Levantadores (1★): existem ${settersCount}, mas são necessários exatamente ${requiredTeams}.`);
+            } else if (settersCount > requiredTeams) {
+                errors.push(`Excesso de Levantadores (1★): existem ${settersCount}, mas o formato exige exatamente ${requiredTeams}.`);
+            }
+
+            if (errors.length === 0) {
+                box.className = "p-3 rounded-xl border text-xs mb-4 bg-emerald-950/40 border-emerald-500/40 text-emerald-300 flex items-center justify-between";
+                msg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Tudo pronto! Pode realizar o sorteio equilibrado.`;
+                btnDraw.disabled = false;
+                btnDraw.classList.remove('opacity-50', 'cursor-not-allowed');
+                return true;
+            } else {
+                box.className = "p-3 rounded-xl border text-xs mb-4 bg-amber-950/40 border-amber-500/40 text-amber-300 flex items-center justify-between";
+                msg.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> ${errors[0]}`;
+                btnDraw.disabled = true;
+                btnDraw.classList.add('opacity-50', 'cursor-not-allowed');
+                return false;
+            }
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function executeBalancedDraw() {
+            if (!validateFormatState()) {
+                showToast('Ajuste a lista de jogadores conforme os requisitos do formato.', 'warning');
+                return;
+            }
+
+            const requiredTotal = getSelectedFormatTarget();
+            const numTeams = requiredTotal / 6;
+
+            const teams = Array.from({ length: numTeams }, (_, i) => ({
+                id: i + 1,
+                name: `Time ${String.fromCharCode(65 + i)}`,
+                players: [],
+                totalStars: 0
+            }));
+
+            const setters = shuffleArray(players.filter(p => p.level === 1));
+            const level2Women = shuffleArray(players.filter(p => p.level === 2));
+            const remainingPlayers = shuffleArray(players.filter(p => p.level > 2));
+
+            // REGRA 1: Exactly 1 Setter per team
+            for (let i = 0; i < numTeams; i++) {
+                teams[i].players.push(setters[i]);
+                teams[i].totalStars += setters[i].level;
+            }
+
+            // REGRA 2: Evenly distribute level 2 women
+            let teamIdx = 0;
+            for (const player of level2Women) {
+                let count = 0;
+                while (teams[teamIdx].players.length >= 6 && count < numTeams) {
+                    teamIdx = (teamIdx + 1) % numTeams;
+                    count++;
+                }
+                teams[teamIdx].players.push(player);
+                teams[teamIdx].totalStars += player.level;
+                teamIdx = (teamIdx + 1) % numTeams;
+            }
+
+            // REGRA 3: Greedy balance for remaining (3, 4, 5 stars)
+            remainingPlayers.sort((a, b) => b.level - a.level);
+
+            for (const player of remainingPlayers) {
+                const eligibleTeams = teams.filter(t => t.players.length < 6);
+                eligibleTeams.sort((a, b) => {
+                    if (a.totalStars === b.totalStars) return Math.random() - 0.5;
+                    return a.totalStars - b.totalStars;
+                });
+                const targetTeam = eligibleTeams[0];
+                targetTeam.players.push(player);
+                targetTeam.totalStars += player.level;
+            }
+
+            currentTeams = teams;
+            renderTeamsResults(teams);
+            showToast('Times sorteados e equilibrados!', 'success');
+        }
+
+        /* ==========================================================================
+           RENDERIZAÇÃO DOS RESULTADOS DOS TIMES
+           ========================================================================== */
+        function renderTeamsResults(teams) {
+            const grid = document.getElementById('teamsGrid');
+            document.getElementById('emptyResultsState').classList.add('hidden');
+            document.getElementById('drawActionsBar').classList.remove('hidden');
+
+            const teamColors = [
+                { bg: 'border-blue-500/40', header: 'from-blue-600/20 to-slate-800', badge: 'bg-blue-500 text-white' },
+                { bg: 'border-amber-500/40', header: 'from-amber-600/20 to-slate-800', badge: 'bg-amber-500 text-white' },
+                { bg: 'border-emerald-500/40', header: 'from-emerald-600/20 to-slate-800', badge: 'bg-emerald-500 text-white' },
+                { bg: 'border-purple-500/40', header: 'from-purple-600/20 to-slate-800', badge: 'bg-purple-500 text-white' }
+            ];
+
+            grid.innerHTML = teams.map((team, idx) => {
+                const style = teamColors[idx % teamColors.length];
+                const avgLevel = (team.totalStars / team.players.length).toFixed(1);
+
+                const sortedPlayers = [...team.players].sort((a, b) => {
+                    if (a.level === 1) return -1;
+                    if (b.level === 1) return 1;
+                    return b.level - a.level;
+                });
+
+                const totalStarsHtml = hideStarsMode 
+                    ? `<span class="text-slate-400 font-mono text-xs">Oculto</span>` 
+                    : `<strong class="text-amber-400 font-mono text-sm">${team.totalStars}★</strong>`;
+
+                const avgHtml = hideStarsMode 
+                    ? `` 
+                    : `<span class="text-[10px] text-slate-400">• Média: ${avgLevel}</span>`;
+
+                return `
+                    <div class="bg-slate-800 border ${style.bg} rounded-2xl shadow-xl overflow-hidden transition hover:shadow-2xl">
+                        <!-- Card Header -->
+                        <div class="bg-gradient-to-r ${style.header} p-4 border-b border-slate-700/60 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-black text-white tracking-wide">${team.name}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs text-slate-300 font-semibold">Força Total: ${totalStarsHtml}</span>
+                                    ${avgHtml}
+                                </div>
+                            </div>
+                            <span class="${style.badge} text-xs font-bold px-2.5 py-1 rounded-lg font-mono">
+                                ${team.players.length}/6 Jogadores
+                            </span>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="p-4 space-y-2.5">
+                            ${sortedPlayers.map(p => {
+                                const genderIcon = p.gender === 'F' 
+                                    ? '<i class="fa-solid fa-venus text-pink-400 text-xs"></i>' 
+                                    : '<i class="fa-solid fa-mars text-blue-400 text-xs"></i>';
+
+                                let roleLabel = '';
+                                if (!hideStarsMode) {
+                                    if (p.level === 1) {
+                                        roleLabel = `<span class="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">Levantador</span>`;
+                                    } else if (p.level === 2) {
+                                        roleLabel = `<span class="bg-pink-500/20 text-pink-300 text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">2★</span>`;
+                                    }
+                                }
+
+                                const starsDisplay = hideStarsMode 
+                                    ? '<span class="text-slate-600 text-[10px]">•••</span>' 
+                                    : '★'.repeat(p.level) + '☆'.repeat(5 - p.level);
+
+                                return `
+                                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-700/50">
+                                        <div class="flex items-center space-x-2.5 truncate">
+                                            <div class="w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center shrink-0">
+                                                ${genderIcon}
+                                            </div>
+                                            <span class="text-xs font-bold text-slate-200 truncate">${escapeHtml(p.name)}</span>
+                                            ${roleLabel}
+                                        </div>
+                                        <div class="text-amber-400 text-[11px] font-mono tracking-widest shrink-0 ml-2">
+                                            ${starsDisplay}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function clearResultsUI() {
+            document.getElementById('teamsGrid').innerHTML = '';
+            document.getElementById('emptyResultsState').classList.remove('hidden');
+            document.getElementById('drawActionsBar').classList.add('hidden');
+            currentTeams = [];
+        }
+
+        function copyTeamsToClipboard() {
+            if (currentTeams.length === 0) return;
+
+            let text = `*🏐 ESCALAÇÃO DOS TIMES - VÔLEI DRAFT 🏐*\n\n`;
+
+            currentTeams.forEach(t => {
+                const headerInfo = hideStarsMode ? '' : ` (Total: ${t.totalStars}★)`;
+                text += `*${t.name.toUpperCase()}*${headerInfo}\n`;
+                t.players.forEach((p, i) => {
+                    const tag = hideStarsMode ? '' : ` (${p.level}★)`;
+                    text += `${i + 1}. ${p.name}${tag}\n`;
+                });
+                text += `\n`;
+            });
+
+            text += `_Gerado por Vôlei Draft - Sorteador Equilibrado_`;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('Formação copiada para o WhatsApp!', 'success');
+                }).catch(() => fallbackCopyText(text));
+            } else {
+                fallbackCopyText(text);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Formação copiada para o WhatsApp!', 'success');
+            } catch (err) {
+                showToast('Não foi possível copiar automaticamente.', 'warning');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function openRulesModal() {
+            const modal = document.getElementById('rulesModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRulesModal() {
+            const modal = document.getElementById('rulesModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = message;
+
+            if (type === 'success') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            } else if (type === 'warning') {
+                toastIcon.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-lg';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-info text-blue-400 text-lg';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+    </script>
+</body>
+</html>
